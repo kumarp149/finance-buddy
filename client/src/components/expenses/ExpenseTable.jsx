@@ -1,14 +1,103 @@
-import { Table, TableBody, TableCell, TableRow, TableHead } from '@aws-amplify/ui-react';
+import React, { useEffect, useState } from 'react';
+
+import { Route, useHistory } from 'react-router-dom';
+
+import { Table, TableBody, TableCell, TableRow, TableHead, Loader } from '@aws-amplify/ui-react';
 import Container from 'react-bootstrap/Container';
 import { Row, Col, OverlayTrigger, Tooltip, Card } from 'react-bootstrap';
 import { SearchField } from '@aws-amplify/ui-react';
 import { Button, ButtonGroup } from '@aws-amplify/ui-react';
+import { CheckboxField, TextField } from '@aws-amplify/ui-react';
+import { Auth } from 'aws-amplify';
+
+import axios from 'axios';
 
 
 export default function ExpenseTable() {
+    const [expenseData, setExpenseData] = useState([]);
+    const [apiError, setApiError] = useState(false);
+    const [searchString, setSearchString] = useState("");
+    const [fromDate, setFromDate] = useState("");
+    const [toDate, setToDate] = useState("");
+    const [userId, setUserId] = useState("");
+    const [refresh, setRefresh] = useState(false);
+    const [refreshState, setRefreshState] = useState(false);
+    const [editExpenseId, setEditExpenseId] = useState("");
+    const [checkboxes, setCheckboxes] = useState([]);
+
+
+
+    const history = useHistory();
+
+    const fetchUserId = async () => {
+        try {
+            const user = await Auth.currentAuthenticatedUser();
+            const { username } = user;
+            setUserId(username);
+        } catch (error) {
+            history.push('/');
+        }
+    }
+
+    const fetchData = async () => {
+        setRefreshState(true);
+        try {
+            const response = await axios.get('/api/expenses/fetch', {
+                params: {
+                    userId: userId,
+                    fromDate: '',
+                    toDate: ''
+                }
+            });
+            setExpenseData(response.data);
+            setApiError(false);
+            setRefreshState(false);
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            setApiError(true);
+            setRefreshState(false);
+        }
+    };
+
+    const handleSearch = (event) => {
+        setSearchString(event.target.value);
+        const filteredData = expenseData.filter((item) => {
+            item.name.toLowerCase().includes(searchString);
+        })
+        setExpenseData(filteredData);
+    }
+
+    const handleRefresh = () => {
+        setRefresh(!refresh);
+    }
+
+    const handleUpdate = (event) => {
+
+    }
+
+    const handleCancel = async (event) => {
+        setEditExpenseId("");
+        await fetchData();
+    }
+
+    const handleCheckboxChange = (event) => {
+        const { checked, dataset } = event.target;
+        const customValue = dataset.id;
+        console.log(customValue);
+    }
+
+
+
+
+
+    useEffect(() => {
+        fetchData();
+        fetchUserId();
+    }, [refresh])
+
     return (
         <Container style={{ border: '1px solid lightgray', marginTop: 2, zIndex: 'auto' }}>
-            <Container style={{marginTop: 20}}>
+            <Container style={{ marginTop: 20 }}>
                 <Row>
                     <Col>
                         <div className='d-flex justify-content-start'>
@@ -24,23 +113,16 @@ export default function ExpenseTable() {
                     </Col>
                     <Col>
                         <div className='d-flex justify-content-end'>
-                            {/* <Row>
-                                <Col>
-                                    <Button>Click</Button>
-                                </Col>
-                                <Col>
-                                    <Button>Click</Button>
-                                </Col>
-                                <Col>
-                                    <Button>Click</Button>
-                                </Col>
-                            </Row> */}
                             <ButtonGroup size="small">
-                                <Button>Refresh</Button>
-                                <Button>Edit</Button>
-                                <Button>Delete</Button>
-                            </ButtonGroup>
 
+                                <Button disabled={editExpenseId === "" ? false : true} onClick={handleRefresh}>Refresh</Button>
+                                {
+                                    editExpenseId === "" ? (<Button disabled={apiError}>Edit</Button>) : (<Button style={{ backgroundColor: '#f90', color: 'black' }} onClick={() => { console.log("CLICKED ON UPDATE") }}>Update</Button>)
+                                }
+                                {
+                                    editExpenseId === "" ? (<Button disabled={true}>Delete</Button>) : (<Button style={{}} onClick={handleCancel}>Cancel</Button>)
+                                }
+                            </ButtonGroup>
                         </div>
                     </Col>
                 </Row>
@@ -49,41 +131,63 @@ export default function ExpenseTable() {
                 <Row>
                     <Col>
                         <div className='d-flex justify-content-start'>
-                            <SearchField label="search" placeholder='Search with expense name' hasSearchButton={false} hasSearchIcon={true}/>
+                            <SearchField label="search" placeholder='Search with expense name' hasSearchButton={false} hasSearchIcon={true} style={{ width: 'auto' }} disabled={editExpenseId === "" ? false : true} />
                         </div>
+                    </Col>
+                    <Col>
                         <div className='d-flex justify-content-end'>
-
+                            <ButtonGroup size="small">
+                                <TextField type='date' disabled={editExpenseId === "" ? false : true}></TextField>
+                                <TextField type='date' disabled={editExpenseId === "" ? false : true}></TextField>
+                                <Button style={{ backgroundColor: '#f90', color: 'black' }} disabled={editExpenseId === "" ? false : true}>Filter</Button>
+                            </ButtonGroup>
                         </div>
                     </Col>
                 </Row>
             </Container>
             <Container>
-                <Table
+                <Table style={{ marginTop: 15 }}
                     caption=""
                     highlightOnHover={true}>
                     <TableHead>
                         <TableRow>
-                            <TableCell as="th">Citrus</TableCell>
-                            <TableCell as="th">Stone Fruit</TableCell>
-                            <TableCell as="th">Berry</TableCell>
+                            <TableCell as="th"><CheckboxField name="subscribe" value="yes" isIndeterminate={true} disabled={refreshState || refresh} /></TableCell>
+                            <TableCell as="th">Name</TableCell>
+                            <TableCell as="th">Amount</TableCell>
+                            <TableCell as="th">Category</TableCell>
+                            <TableCell as="th">Date</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        <TableRow>
-                            <TableCell>Orange</TableCell>
-                            <TableCell>Nectarine</TableCell>
-                            <TableCell>Raspberry</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>Grapefruit</TableCell>
-                            <TableCell>Apricot</TableCell>
-                            <TableCell>Blueberry</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>Lime</TableCell>
-                            <TableCell>Peach</TableCell>
-                            <TableCell>Strawberry</TableCell>
-                        </TableRow>
+                        {refreshState === true ? (
+                            <TableRow>
+                                <TableCell></TableCell>
+                                <TableCell><Loader/></TableCell>
+                                <TableCell><Loader/></TableCell>
+                                <TableCell><Loader/></TableCell>
+                                <TableCell><Loader/></TableCell>
+                            </TableRow>
+                        ) : apiError === true ? (
+                            <TableRow>
+                                <TableCell></TableCell>
+                                <TableCell style={{color: 'red'}}>API ERROR</TableCell>
+                                <TableCell style={{color: 'red'}}>API ERROR</TableCell>
+                                <TableCell style={{color: 'red'}}>API ERROR</TableCell>
+                                <TableCell style={{color: 'red'}}>API ERROR</TableCell>
+                            </TableRow>
+                        ) : (
+                            expenseData.map((item, index) => (
+                                <TableRow>
+                                    <TableCell>
+                                        <CheckboxField name="check" value="yes" onChange={handleCheckboxChange} data-id={item.id}></CheckboxField>
+                                    </TableCell>
+                                    <TableCell data-id={item.id}>{item.name}</TableCell>
+                                    <TableCell data-id={item.id}>{item.amount}</TableCell>
+                                    <TableCell data-id={item.id}>{item.category}</TableCell>
+                                    <TableCell data-id={item.id}>{item.date}</TableCell>
+                                </TableRow>
+                            ))
+                        )}
                     </TableBody>
                 </Table>
             </Container>
