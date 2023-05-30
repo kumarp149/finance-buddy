@@ -19,7 +19,7 @@ export default function ExpenseTable() {
     const [searchString, setSearchString] = useState("");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
-    const [userId, setUserId] = useState("");
+    //const [userId, setUserId] = useState("");
     const [refresh, setRefresh] = useState(false);
     const [refreshState, setRefreshState] = useState(false);
     const [editExpenseId, setEditExpenseId] = useState("");
@@ -29,26 +29,34 @@ export default function ExpenseTable() {
 
     const history = useHistory();
 
-    const fetchUserId = async () => {
-        try {
-            const user = await Auth.currentAuthenticatedUser();
-            const { username } = user;
-            setUserId(username);
-        } catch (error) {
-            history.push('/');
-        }
-    }
+    // const fetchUserId = async () => {
+    //     try {
+    //         const user = await Auth.currentAuthenticatedUser();
+    //         const { username } = user;
+    //         console.log('username is ' + username);
+    //         setUserId(username);
+    //     } catch (error) {
+    //         history.push('/');
+    //     }
+    //}
 
     const fetchData = async () => {
         setRefreshState(true);
         try {
+            const user = await Auth.currentAuthenticatedUser();
+            console.log(user);
+            const { username } = user;
+            console.log(username);
             const response = await axios.get('/api/expenses/fetch', {
                 params: {
-                    userId: userId,
-                    fromDate: '',
-                    toDate: ''
+                    userId: username,
+                    fromDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+                    toDate: new Date()
                 }
             });
+            console.log(typeof response.data);
+            console.log(JSON.stringify(response.data));
+            console.log(response.data[0]);
             setExpenseData(response.data);
             setApiError(false);
             setRefreshState(false);
@@ -87,12 +95,23 @@ export default function ExpenseTable() {
     }
 
 
+    const timeStampToDate = (timestamp) => {
+        const date = new Date(timestamp);
+        const formattedDate = date.toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric"
+        });
+        return formattedDate;
+
+    }
+
+
 
 
 
     useEffect(() => {
         fetchData();
-        fetchUserId();
     }, [refresh])
 
     return (
@@ -162,18 +181,18 @@ export default function ExpenseTable() {
                         {refreshState === true ? (
                             <TableRow>
                                 <TableCell></TableCell>
-                                <TableCell><Loader/></TableCell>
-                                <TableCell><Loader/></TableCell>
-                                <TableCell><Loader/></TableCell>
-                                <TableCell><Loader/></TableCell>
+                                <TableCell><Loader /></TableCell>
+                                <TableCell><Loader /></TableCell>
+                                <TableCell><Loader /></TableCell>
+                                <TableCell><Loader /></TableCell>
                             </TableRow>
                         ) : apiError === true ? (
                             <TableRow>
                                 <TableCell></TableCell>
-                                <TableCell style={{color: 'red'}}>API ERROR</TableCell>
-                                <TableCell style={{color: 'red'}}>API ERROR</TableCell>
-                                <TableCell style={{color: 'red'}}>API ERROR</TableCell>
-                                <TableCell style={{color: 'red'}}>API ERROR</TableCell>
+                                <TableCell style={{ color: 'red' }}>API ERROR</TableCell>
+                                <TableCell style={{ color: 'red' }}>API ERROR</TableCell>
+                                <TableCell style={{ color: 'red' }}>API ERROR</TableCell>
+                                <TableCell style={{ color: 'red' }}>API ERROR</TableCell>
                             </TableRow>
                         ) : (
                             expenseData.map((item, index) => (
@@ -184,7 +203,7 @@ export default function ExpenseTable() {
                                     <TableCell data-id={item.id}>{item.name}</TableCell>
                                     <TableCell data-id={item.id}>{item.amount}</TableCell>
                                     <TableCell data-id={item.id}>{item.category}</TableCell>
-                                    <TableCell data-id={item.id}>{item.date}</TableCell>
+                                    <TableCell data-id={item.id}>{timeStampToDate(item.date)}</TableCell>
                                 </TableRow>
                             ))
                         )}

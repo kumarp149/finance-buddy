@@ -15,10 +15,12 @@ app.get('/api/message', (req, res) => {
 
 app.get('/api/expenses/fetch',async (req,res) => {
   const {userId,fromDate,toDate} = req.query;
-  const response = fetchExpenses(fromDate,toDate,userId);
+  console.log(req.query);
+  const response = await fetchExpenses(fromDate,toDate,userId);
   if (response === null){
     return res.status(501).send("Internal server error");
   } else{
+    console.log(response);
     return res.json(response);
   }
 })
