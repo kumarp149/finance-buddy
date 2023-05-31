@@ -23,7 +23,7 @@ const fetchExpenses = async (fromDate, toDate, userId) => {
         });
         const [rows, fields] = await connection.execute('SELECT * FROM expenses WHERE userId = ? AND date BETWEEN ? AND ?',[userId,fromDate,toDate]);
         await connection.end();
-        console.log(rows);
+        //console.log(rows);
         return rows;
     } catch (error) {
         console.log("ERROR: " + error);

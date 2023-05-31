@@ -60,7 +60,7 @@ export default function ExpenseTable() {
     const [newAmount, setNewAmount] = useState("");
     const [newCategory, setNewCategory] = useState("");
     const [newDate, setNewDate] = useState("");
-
+    const [updateStatus, setUpdateStatus] = useState("");
 
 
     const history = useHistory();
@@ -82,7 +82,6 @@ export default function ExpenseTable() {
             const user = await Auth.currentAuthenticatedUser();
             console.log(user);
             const { username } = user;
-            console.log(username);
             const response = await axios.get('/api/expenses/fetch', {
                 params: {
                     userId: username,
@@ -90,9 +89,6 @@ export default function ExpenseTable() {
                     toDate: toDate
                 }
             });
-            console.log(typeof response.data);
-            console.log(JSON.stringify(response.data));
-            console.log(response.data[0]);
             setExpenseData(response.data);
             setFilteredData(response.data);
             setApiError(false);
@@ -107,12 +103,9 @@ export default function ExpenseTable() {
     const handleSearch = (event) => {
         event.persist();
         setSearchString(event.target.value);
-        console.log(searchString);
-        console.log(expenseData);
         const data = expenseData.filter(item =>
             item.title.toLowerCase().includes(searchString.toLowerCase())
         )
-        console.log(data);
         setFilteredData(data);
     }
 
@@ -162,6 +155,34 @@ export default function ExpenseTable() {
                     setCheckboxes((prevArray) => [...prevArray, item.id]);
                 }
             })
+        }
+    }
+
+    const handleUpdateSubmit = async (e) => {
+        try {
+            const user = await Auth.currentAuthenticatedUser();
+            setRefreshState(true);
+            try {
+                setUpdateStatus("Successfully updated the expense details");
+                const response = await axios.post('/api/expenses/update', {
+                    expenseId: editExpenseId,
+                    expenseName: newTitle,
+                    expenseAmount: newAmount,
+                    expenseDate: newDate,
+                    expenseCategory: newCategory
+                })
+                console.log(response);
+                await fetchData();
+                setEditExpenseId("");
+                setUpdateStatus("");
+            } catch (error) {
+                setUpdateStatus("Error updating the expense details, try again later");
+                await fetchData();
+                setEditExpenseId("");
+                setUpdateStatus("");
+            }
+        } catch (error) {
+            history.push('/auth');
         }
     }
 
@@ -220,9 +241,9 @@ export default function ExpenseTable() {
                         <div className='d-flex justify-content-end'>
                             <ButtonGroup size="small">
 
-                                <Button disabled={editExpenseId === "" ? false : true} onClick={handleRefresh}>Refresh</Button>
+                                <Button disabled={refreshState === true ? true : editExpenseId !== "" ? true : false} onClick={handleRefresh}>Refresh</Button>
                                 {
-                                    editExpenseId === "" ? (<Button disabled={apiError ? true : refreshState === true ? true : checkboxes.length === 1 ? false : true} onClick={handleUpdate}>Edit</Button>) : (<Button style={{ backgroundColor: '#f90', color: 'black' }} onClick={() => { console.log("CLICKED ON UPDATE") }}>Update</Button>)
+                                    editExpenseId === "" ? (<Button disabled={apiError ? true : refreshState === true ? true : checkboxes.length === 1 ? false : true} onClick={handleUpdate}>Edit</Button>) : (<Button style={{ backgroundColor: '#f90', color: 'black' }} onClick={handleUpdateSubmit} disabled={(newTitle === null || newTitle.length < 3 || newTitle.length > 30) ? true : ((newAmount === null) || (newAmount == "") || (newAmount <= 0)) ? true : (newCategory === null || newCategory === "") ? true : (newDate === null || newDate.length == 0) ? true : false}>Update</Button>)
                                 }
                                 {
                                     editExpenseId === "" ? (<Button disabled={apiError ? true : refreshState === true ? true : checkboxes.length > 0 ? false : true}>Delete</Button>) : (<Button style={{}} onClick={handleCancel}>Cancel</Button>)
@@ -250,7 +271,7 @@ export default function ExpenseTable() {
                     </Col>
                 </Row>
             </Container>
-            <Container>
+            <Container style={{ marginBottom: 20 }}>
                 <Table style={{ marginTop: 15 }}
                     caption=""
                     highlightOnHover={editExpenseId === ""}>
@@ -294,10 +315,10 @@ export default function ExpenseTable() {
                                     </TableRow>
                                 ) : (
                                     <TableRow>
-                                        <TableCell></TableCell>
-                                        <TableCell><TextField size="small" value={newTitle} placeholder="Enter here" onChange={(e) => setNewTitle(e.target.value)} hasError={(newTitle.length < 3 || newTitle.length > 30)} errorMessage={(newTitle.length < 3) ? "cannot have less than 3 characters" : (newTitle.length > 30) ? "cannot have more than 30 characters" : ""}></TextField></TableCell>
-                                        <TableCell><TextField size="small" type='number' value={newAmount} placeholder="Enter here" onChange={(e) => setNewAmount(e.target.value)} hasError={(newAmount == "") || (newAmount < 0)} errorMessage={(newAmount == "") ? "cannot be empty" : (newAmount < 0) ? "cannot be a negative number" : ""}></TextField></TableCell>
-                                        <TableCell><SelectField placeholder="Please select an option" value={newCategory} size='small' onChange={(e) => setNewCategory(e.target.value)}>
+                                        <TableCell><CheckboxField disabled={true}/></TableCell>
+                                        <TableCell><TextField size="small" value={newTitle} placeholder="Enter here" onChange={(e) => setNewTitle(e.target.value)} hasError={(newTitle === null || newTitle.length < 3 || newTitle.length > 30)} errorMessage={(newTitle.length < 3) ? "cannot have less than 3 characters" : (newTitle.length > 30) ? "cannot have more than 30 characters" : ""}></TextField></TableCell>
+                                        <TableCell><TextField size="small" type='number' value={newAmount} placeholder="Enter here" onChange={(e) => setNewAmount(e.target.value)} hasError={(newAmount === null) || (newAmount == "") || (newAmount <= 0)} errorMessage={(newAmount === null || newAmount == "") ? "have to be a valid positive number" : (newAmount <= 0) ? "have to be a valid positive number" : ""}></TextField></TableCell>
+                                        <TableCell><SelectField placeholder="Please select an option" value={newCategory} size='small' onChange={(e) => setNewCategory(e.target.value)} hasError={newCategory === null || newCategory === ""} errorMessage={(newCategory === null || newCategory === "") ? "please select a category" : ""}>
                                             <option children="Food" value="Food"></option>
                                             <option children="Groceries" value="Groceries"></option>
                                             <option children="Movies" value="Movies"></option>
@@ -307,7 +328,7 @@ export default function ExpenseTable() {
                                             <option children="Others" value="Others"></option>
                                         </SelectField>
                                         </TableCell>
-                                        <TableCell><TextField size="small" type='date' value={newDate} onChange={(e) => setNewDate(e.target.value)}></TextField></TableCell>
+                                        <TableCell><TextField size="small" type='date' value={newDate} onChange={(e) => setNewDate(e.target.value)} hasError={newDate === null || newDate.length == 0} errorMessage={(newDate === null || newDate.length == 0) ? "select a valid date" : ""}></TextField></TableCell>
                                     </TableRow>
                                 )
                             )
@@ -316,13 +337,20 @@ export default function ExpenseTable() {
                     </TableBody>
                 </Table>
             </Container>
-            {refreshState === true ? (
+            {(refreshState === true && updateStatus === "") ? (
                 <Container fluid style={{ textAlign: 'center', marginTop: '10px', marginBottom: '10px' }}><Loader variation="linear" /></Container>
+            ) : refreshState === true && updateStatus !== "" ? (
+                <>
+                    <Container fluid style={{ textAlign: 'center', marginTop: '10px', marginBottom: '10px' }}><Loader variation="linear" /></Container>
+                    <Container fluid style={{ textAlign: 'center', marginTop: '10px', marginBottom: '10px', color: updateStatus.includes("Error") ? "red" : "green" }}> {updateStatus}</Container>
+                </>
             ) : (apiError === true) ? (
                 <Container fluid style={{ textAlign: 'center', color: '#ff0000', marginTop: '10px', marginBottom: '10px' }}>Error Fetching Data</Container>
             ) : (filteredData.length === 0) ? (
                 <Container fluid style={{ textAlign: 'center', marginTop: '10px', marginBottom: '10px' }}> No expenses found in the select date range</Container>
-            ) : <></>}
+            ) : (
+                <></>
+            )}
         </Container>
     )
 }

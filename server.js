@@ -1,6 +1,9 @@
 const express = require('express');
 const app = express();
 const path = require('path');
+const bodyParser = require('body-parser');
+app.use(bodyParser.json());
+
 const port = 5000;
 
 
@@ -15,19 +18,19 @@ app.get('/api/message', (req, res) => {
 
 app.get('/api/expenses/fetch',async (req,res) => {
   const {userId,fromDate,toDate} = req.query;
-  console.log(req.query);
+  ;//onsole.log(req.query);
   const response = await fetchExpenses(fromDate,toDate,userId);
   if (response === null){
     return res.status(501).send("Internal server error");
   } else{
-    console.log(response);
+    //console.log(response);
     return res.json(response);
   }
 })
 
-app.post('/api/expenses/update',(req,res) => {
+app.post('/api/expenses/update',async (req,res) => {
   const {expenseId,expenseName,expenseAmount,expenseDate,expenseCategory} = req.body;
-  const response = updateExpense(expenseId,expenseName,expenseAmount,expenseDate,expenseCategory);
+  const response = await updateExpense(expenseId,expenseName,expenseAmount,expenseDate,expenseCategory);
   if (response === null){
     return res.status(501).send("Internal server error");
   } else{
