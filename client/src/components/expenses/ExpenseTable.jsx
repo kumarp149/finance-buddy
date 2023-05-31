@@ -35,6 +35,15 @@ export default function ExpenseTable() {
         return formattedDate;
     }
 
+    const formatDate = (date) => {
+        const currentDate = new Date(date);
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth() + 1; // Adding 1 to get the month index from 1 to 12
+        const day = currentDate.getDate();
+        const formattedDate = `${year}-${month.toString().padStart(2, "0")}-${day.toString().padStart(2, "0")}`;
+        return formattedDate;
+    }
+
 
     const [expenseData, setExpenseData] = useState([]);
     const [apiError, setApiError] = useState(false);
@@ -117,11 +126,12 @@ export default function ExpenseTable() {
         const obj = expenseData.filter(item =>
             item.id.includes(checkboxes[0])
         )
-        setNewTitle(obj.title);
-        setNewAmount(obj.amount);
-        setNewCategory(obj.category);
-        setNewDate(obj.date);
+        setNewTitle(obj[0].title);
+        setNewAmount(obj[0].amount);
+        setNewCategory(obj[0].category);
+        setNewDate(formatDate(obj[0].date));
         setEditExpenseId(checkboxes[0]);
+        setCheckboxes([]);
     }
 
     const handleCancel = async (event) => {
@@ -243,10 +253,10 @@ export default function ExpenseTable() {
             <Container>
                 <Table style={{ marginTop: 15 }}
                     caption=""
-                    highlightOnHover={true}>
+                    highlightOnHover={editExpenseId === ""}>
                     <TableHead>
                         <TableRow>
-                            <TableCell as="th"><CheckboxField name="subscribe" value="yes" isIndeterminate={((filteredData.length !== 0) && (checkboxes.length === filteredData.length)) ? false : (checkboxes.length > 0) ? true : false} disabled={refreshState || filteredData.length === 0} onChange={handleParentCheckBoxChange} checked={(refreshState === true) ? false : (filteredData.length === 0) ? false : (checkboxes.length === filteredData.length) ? true : false} /></TableCell>
+                            <TableCell as="th"><CheckboxField name="subscribe" value="yes" isIndeterminate={((filteredData.length !== 0) && (checkboxes.length === filteredData.length)) ? false : (checkboxes.length > 0) ? true : false} disabled={editExpenseId !== "" || refreshState || filteredData.length === 0} onChange={handleParentCheckBoxChange} checked={(refreshState === true) ? false : (filteredData.length === 0) ? false : (checkboxes.length === filteredData.length) ? true : false} /></TableCell>
                             <TableCell as="th">Name</TableCell>
                             <TableCell as="th">Amount</TableCell>
                             <TableCell as="th">Category</TableCell>
@@ -275,7 +285,7 @@ export default function ExpenseTable() {
                                 editExpenseId === "" || item.id !== editExpenseId ? (
                                     <TableRow>
                                         <TableCell>
-                                            <CheckboxField name="check" value="yes" onChange={handleCheckboxChange} data-id={item.id} checked={checkboxes.includes(item.id) === true}></CheckboxField>
+                                            <CheckboxField name="check" value="yes" onChange={handleCheckboxChange} data-id={item.id} checked={checkboxes.includes(item.id) === true} disabled={editExpenseId !== ""}></CheckboxField>
                                         </TableCell>
                                         <TableCell data-id={item.id}>{item.title}</TableCell>
                                         <TableCell data-id={item.id}>{item.amount}</TableCell>
@@ -285,9 +295,9 @@ export default function ExpenseTable() {
                                 ) : (
                                     <TableRow>
                                         <TableCell></TableCell>
-                                        <TableCell><TextField size="small" value={newTitle} placeholder="Enter here"></TextField></TableCell>
-                                        <TableCell><TextField size="small" type='number' value={newAmount} placeholder="Enter here"></TextField></TableCell>
-                                        <TableCell><SelectField placeholder="Please select an option" value={newCategory} size='small'>
+                                        <TableCell><TextField size="small" value={newTitle} placeholder="Enter here" onChange={(e) => setNewTitle(e.target.value)} hasError={(newTitle.length < 3 || newTitle.length > 30)} errorMessage={(newTitle.length < 3) ? "cannot have less than 3 characters" : (newTitle.length > 30) ? "cannot have more than 30 characters" : ""}></TextField></TableCell>
+                                        <TableCell><TextField size="small" type='number' value={newAmount} placeholder="Enter here" onChange={(e) => setNewAmount(e.target.value)} hasError={(newAmount == "") || (newAmount < 0)} errorMessage={(newAmount == "") ? "cannot be empty" : (newAmount < 0) ? "cannot be a negative number" : ""}></TextField></TableCell>
+                                        <TableCell><SelectField placeholder="Please select an option" value={newCategory} size='small' onChange={(e) => setNewCategory(e.target.value)}>
                                             <option children="Food" value="Food"></option>
                                             <option children="Groceries" value="Groceries"></option>
                                             <option children="Movies" value="Movies"></option>
@@ -297,7 +307,7 @@ export default function ExpenseTable() {
                                             <option children="Others" value="Others"></option>
                                         </SelectField>
                                         </TableCell>
-                                        <TableCell><TextField size="small" type='date' value={newDate}></TextField></TableCell>
+                                        <TableCell><TextField size="small" type='date' value={newDate} onChange={(e) => setNewDate(e.target.value)}></TextField></TableCell>
                                     </TableRow>
                                 )
                             )
