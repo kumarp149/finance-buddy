@@ -9,6 +9,8 @@ import { SearchField } from '@aws-amplify/ui-react';
 import { Button, ButtonGroup } from '@aws-amplify/ui-react';
 import { CheckboxField, TextField } from '@aws-amplify/ui-react';
 import { Auth } from 'aws-amplify';
+import { Modal } from 'antd';
+
 
 
 
@@ -22,17 +24,16 @@ export default function ExpenseTable() {
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth() + 1; // Adding 1 to get the month index from 1 to 12
         const firstDay = "01"; // Assuming the first day is always the 1st
-        const formattedDate = `${year}-${month.toString().padStart(2, "0")}-${firstDay}`;
-        return formattedDate;
+        return `${year}-${month.toString().padStart(2, "0")}-${firstDay}`;
     }
 
     const currentDate = () => {
-        const currentDate = new Date();
-        const year = currentDate.getFullYear();
-        const month = currentDate.getMonth() + 1; // Adding 1 to get the month index from 1 to 12
-        const day = currentDate.getDate();
-        const formattedDate = `${year}-${month.toString().padStart(2, "0")}-${day.toString().padStart(2, "0")}`;
-        return formattedDate;
+        const todayDate = new Date();
+        const lastDay = new Date(todayDate.getFullYear(), todayDate.getMonth() + 1, 0);
+        const year = lastDay.getFullYear();
+        const month = lastDay.getMonth() + 1;
+        const day = lastDay.getDate();
+        return `${year}-${month.toString().padStart(2, "0")}-${day.toString().padStart(2, "0")}`;
     }
 
     const formatDate = (date) => {
@@ -40,8 +41,7 @@ export default function ExpenseTable() {
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth() + 1; // Adding 1 to get the month index from 1 to 12
         const day = currentDate.getDate();
-        const formattedDate = `${year}-${month.toString().padStart(2, "0")}-${day.toString().padStart(2, "0")}`;
-        return formattedDate;
+        return `${year}-${month.toString().padStart(2, "0")}-${day.toString().padStart(2, "0")}`;
     }
 
 
@@ -61,6 +61,9 @@ export default function ExpenseTable() {
     const [newCategory, setNewCategory] = useState("");
     const [newDate, setNewDate] = useState("");
     const [updateStatus, setUpdateStatus] = useState("");
+    const [modelOpen,setModelOpen] = useState(false);
+    const [deleteStatus,setDeleteStatus] = useState(false);
+    const [deleteStatusApi,setDeleteStatusApi] = useState(false);
 
 
     const history = useHistory();
@@ -132,6 +135,13 @@ export default function ExpenseTable() {
         await fetchData();
     }
 
+    const handleDelete = (event) => {
+        const obj = expenseData.filter(item =>
+            item.id.includes(checkboxes[0])
+        )
+        setDeleteStatus(true);
+    }
+
     const handleCheckboxChange = (event) => {
         const { checked, dataset } = event.target;
         const idToggled = dataset.id;
@@ -180,6 +190,30 @@ export default function ExpenseTable() {
                 await fetchData();
                 setEditExpenseId("");
                 setUpdateStatus("");
+            }
+        } catch (error) {
+            history.push('/auth');
+        }
+    }
+
+    const handleDeleteConfirm = async(event) => {
+        console.log(checkboxes);
+        setDeleteStatus(false);
+        try {
+            const user = await Auth.currentAuthenticatedUser();
+            setRefreshState(true);
+            try {
+                setDeleteStatusApi("Successfully deleted the selected expenses");
+                const response = await axios.post('/api/expenses/delete',{
+                    expenseIds: checkboxes
+                })
+                console.log(response);
+                await fetchData();
+                setDeleteStatus("");
+            } catch (error) {
+                setDeleteStatusApi("Error deleting the selected expenses");
+                await fetchData();
+                setDeleteStatusApi("");
             }
         } catch (error) {
             history.push('/auth');
@@ -246,7 +280,7 @@ export default function ExpenseTable() {
                                     editExpenseId === "" ? (<Button disabled={apiError ? true : refreshState === true ? true : checkboxes.length === 1 ? false : true} onClick={handleUpdate}>Edit</Button>) : (<Button style={{ backgroundColor: '#f90', color: 'black' }} onClick={handleUpdateSubmit} disabled={(newTitle === null || newTitle.length < 3 || newTitle.length > 30) ? true : ((newAmount === null) || (newAmount == "") || (newAmount <= 0)) ? true : (newCategory === null || newCategory === "") ? true : (newDate === null || newDate.length == 0) ? true : false}>Update</Button>)
                                 }
                                 {
-                                    editExpenseId === "" ? (<Button disabled={apiError ? true : refreshState === true ? true : checkboxes.length > 0 ? false : true}>Delete</Button>) : (<Button style={{}} onClick={handleCancel}>Cancel</Button>)
+                                    editExpenseId === "" ? (<Button disabled={apiError ? true : refreshState === true ? true : checkboxes.length > 0 ? false : true} onClick={handleDelete}>Delete</Button>) : (<Button style={{}} onClick={handleCancel}>Cancel</Button>)
                                 }
                             </ButtonGroup>
                         </div>
@@ -344,6 +378,11 @@ export default function ExpenseTable() {
                     <Container fluid style={{ textAlign: 'center', marginTop: '10px', marginBottom: '10px' }}><Loader variation="linear" /></Container>
                     <Container fluid style={{ textAlign: 'center', marginTop: '10px', marginBottom: '10px', color: updateStatus.includes("Error") ? "red" : "green" }}> {updateStatus}</Container>
                 </>
+            ) : refreshState === true && deleteStatusApi !== "" ? (
+                <>
+                    <Container fluid style={{ textAlign: 'center', marginTop: '10px', marginBottom: '10px' }}><Loader variation="linear" /></Container>
+                    <Container fluid style={{ textAlign: 'center', marginTop: '10px', marginBottom: '10px', color: deleteStatusApi.includes("Error") ? "red" : "green" }}> {deleteStatusApi}</Container>
+                </>
             ) : (apiError === true) ? (
                 <Container fluid style={{ textAlign: 'center', color: '#ff0000', marginTop: '10px', marginBottom: '10px' }}>Error Fetching Data</Container>
             ) : (filteredData.length === 0) ? (
@@ -351,6 +390,7 @@ export default function ExpenseTable() {
             ) : (
                 <></>
             )}
+            <Modal title="All the selected expenses will be deleted" open={deleteStatus} onOk={handleDeleteConfirm} onCancel={() => {setDeleteStatus(!deleteStatus)}}></Modal>
         </Container>
     )
 }

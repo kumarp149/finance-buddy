@@ -48,7 +48,7 @@ const updateExpense = async (expenseId,expenseName,expenseAmount,expenseDate,exp
     }
 }
 
-const deleteExpenses = async (expenseId) => {
+const deleteExpenses = async (expenseIds) => {
     try {
         const connection = await mysql.createConnection({
             host: dbSecrets.hostname,
@@ -56,7 +56,7 @@ const deleteExpenses = async (expenseId) => {
             password: dbSecrets.password,
             database: dbSecrets.dbName
         });
-        const [rows, fields] = await connection.execute("DELETE FROM expenses WHERE id = ?",[expenseId])
+        const [rows, fields] = await connection.execute("DELETE FROM expenses WHERE id in (?)",[expenseIds])
         await connection.end();
         return rows.affectedRows;
     } catch (error) {
