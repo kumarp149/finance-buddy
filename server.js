@@ -41,8 +41,9 @@ app.post('/api/expenses/update',async (req,res) => {
 app.post('/api/expenses/delete',async (req,res) => {
   const expenseIds = req.body.expenseIds;
   console.log("EXPENSEIDS");
-  console.log(expenseIds);
+  console.log(typeof expenseIds);
   const response = await deleteExpenses(expenseIds);
+  console.log(response);
   if (response === null){
     return res.status(501).send("Internal server error");
   } else{

@@ -256,12 +256,12 @@ export default function ExpenseTable() {
     }, [refresh])
 
     return (
-        <Container style={{ border: '1px solid lightgray', marginTop: 2, zIndex: 'auto' }}>
+        <Container style={{ border: '1px solid lightgray', marginTop: 0, zIndex: 'auto', marginLeft: '0px'}}>
             <Container style={{ marginTop: 20 }}>
                 <Row>
                     <Col>
                         <div className='d-flex justify-content-start'>
-                            <Card style={{ border: 'none' }}>
+                            <Card style={{ border: 'none',color: 'inherit' }}>
                                 <Card.Body style={{ padding: '0' }}>
                                     <Card.Title>Expenses</Card.Title>
                                     <Card.Text>

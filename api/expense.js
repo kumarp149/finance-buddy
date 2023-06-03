@@ -11,9 +11,6 @@ const dbSecrets = require("../secrets/creds.json").db;
 // })
 
 const fetchExpenses = async (fromDate, toDate, userId) => {
-    console.log(fromDate);
-    console.log(toDate);
-    console.log(userId);
     try {
         const connection = await mysql.createConnection({
             host: dbSecrets.hostname,
