@@ -53,8 +53,10 @@ const deleteExpenses = async (expenseIds) => {
             password: dbSecrets.password,
             database: dbSecrets.dbName
         });
-        const [rows, fields] = await connection.execute("DELETE FROM expenses WHERE id in (?)",[expenseIds])
+        const [rows, fields] = await connection.execute("DELETE FROM expenses WHERE id in (?)",expenseIds)
         await connection.end();
+        console.log("ROWS");
+        console.log(rows);
         return rows.affectedRows;
     } catch (error) {
         console.log("ERROR: " + error);

@@ -17,8 +17,9 @@ app.get('/api/message', (req, res) => {
 });
 
 app.get('/api/expenses/fetch',async (req,res) => {
+  //console.log("FETCH API CALLED");
   const {userId,fromDate,toDate} = req.query;
-  ;//onsole.log(req.query);
+  //console.log(req.query);
   const response = await fetchExpenses(fromDate,toDate,userId);
   if (response === null){
     return res.status(501).send("Internal server error");
@@ -41,7 +42,7 @@ app.post('/api/expenses/update',async (req,res) => {
 app.post('/api/expenses/delete',async (req,res) => {
   const expenseIds = req.body.expenseIds;
   console.log("EXPENSEIDS");
-  console.log(typeof expenseIds);
+  console.log(expenseIds);
   const response = await deleteExpenses(expenseIds);
   console.log(response);
   if (response === null){

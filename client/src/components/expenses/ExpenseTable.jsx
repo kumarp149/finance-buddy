@@ -17,7 +17,7 @@ import { Modal } from 'antd';
 import axios from 'axios';
 
 
-export default function ExpenseTable() {
+export default function ExpenseTable(props) {
 
     const firstDayOfMonth = () => {
         const currentDate = new Date();
@@ -45,12 +45,12 @@ export default function ExpenseTable() {
     }
 
 
-    const [expenseData, setExpenseData] = useState([]);
+    const [expenseData, setExpenseData] = useState(props.data);
     const [apiError, setApiError] = useState(false);
     const [searchString, setSearchString] = useState("");
-    const [fromDate, setFromDate] = useState(firstDayOfMonth());
-    const [toDate, setToDate] = useState(currentDate());
-    const [refresh, setRefresh] = useState(false);
+    const [fromDate, setFromDate] = useState(props.fromDate);
+    const [toDate, setToDate] = useState(props.toDate);
+    //const [refresh, setRefresh] = useState(false);
     const [refreshState, setRefreshState] = useState(false);
     const [editExpenseId, setEditExpenseId] = useState("");
     const [checkboxes, setCheckboxes] = useState([]);
@@ -61,61 +61,56 @@ export default function ExpenseTable() {
     const [newCategory, setNewCategory] = useState("");
     const [newDate, setNewDate] = useState("");
     const [updateStatus, setUpdateStatus] = useState("");
-    const [modelOpen,setModelOpen] = useState(false);
-    const [deleteStatus,setDeleteStatus] = useState(false);
-    const [deleteStatusApi,setDeleteStatusApi] = useState(false);
+    const [modelOpen, setModelOpen] = useState(false);
+    //const [deleteStatus, setDeleteStatus] = useState(false);
+    const [deleteStatusApi, setDeleteStatusApi] = useState(false);
+    const [deleteConfirmModelOpen, setDeleteConfirmModel] = useState(false);
+    const [deleteModelLoading, setDeleteModelLoading] = useState(false);
+    const [newFetch, setNewFetch] = useState(false);
 
 
     const history = useHistory();
 
-    // const fetchUserId = async () => {
+
+    // const fetchData = async () => {
+    //     setRefreshState(true);
     //     try {
     //         const user = await Auth.currentAuthenticatedUser();
+    //         console.log(user);
     //         const { username } = user;
-    //         console.log('username is ' + username);
-    //         setUserId(username);
+    //         const response = await axios.get('/api/expenses/fetch', {
+    //             params: {
+    //                 userId: username,
+    //                 fromDate: fromDate,
+    //                 toDate: toDate
+    //             }
+    //         });
+    //         setExpenseData(response.data);
+    //         setFilteredData(response.data);
+    //         setApiError(false);
+    //         setRefreshState(false);
     //     } catch (error) {
-    //         history.push('/');
+    //         console.error('Error fetching data:', error);
+    //         setApiError(true);
+    //         setRefreshState(false);
     //     }
-    //}
+    // };
 
-    const fetchData = async () => {
-        setRefreshState(true);
-        try {
-            const user = await Auth.currentAuthenticatedUser();
-            console.log(user);
-            const { username } = user;
-            const response = await axios.get('/api/expenses/fetch', {
-                params: {
-                    userId: username,
-                    fromDate: fromDate,
-                    toDate: toDate
-                }
-            });
-            setExpenseData(response.data);
-            setFilteredData(response.data);
-            setApiError(false);
-            setRefreshState(false);
-        } catch (error) {
-            console.error('Error fetching data:', error);
-            setApiError(true);
-            setRefreshState(false);
-        }
-    };
+    // const handleSearch = (event) => {
+    //     event.persist();
+    //     setSearchString(event.target.value);
+    //     const data = expenseData.filter(item =>
+    //         item.title.toLowerCase().includes(searchString.toLowerCase())
+    //     )
+    //     setFilteredData(data);
+    // }
 
-    const handleSearch = (event) => {
-        event.persist();
-        setSearchString(event.target.value);
-        const data = expenseData.filter(item =>
-            item.title.toLowerCase().includes(searchString.toLowerCase())
-        )
-        setFilteredData(data);
-    }
-
-    const handleRefresh = () => {
-        setRefresh(!refresh);
+    const handleRefresh = async () => {
+        //setRefreshState(true);
         setCheckboxes([]);
         setSearchString("");
+        await props.refetchVia(fromDate, toDate);
+        //setRefreshState(false);
     }
 
     const handleUpdate = (event) => {
@@ -132,14 +127,13 @@ export default function ExpenseTable() {
 
     const handleCancel = async (event) => {
         setEditExpenseId("");
-        await fetchData();
     }
 
     const handleDelete = (event) => {
         const obj = expenseData.filter(item =>
             item.id.includes(checkboxes[0])
         )
-        setDeleteStatus(true);
+        setDeleteConfirmModel(true);
     }
 
     const handleCheckboxChange = (event) => {
@@ -169,55 +163,24 @@ export default function ExpenseTable() {
     }
 
     const handleUpdateSubmit = async (e) => {
-        try {
-            const user = await Auth.currentAuthenticatedUser();
-            setRefreshState(true);
-            try {
-                setUpdateStatus("Successfully updated the expense details");
-                const response = await axios.post('/api/expenses/update', {
-                    expenseId: editExpenseId,
-                    expenseName: newTitle,
-                    expenseAmount: newAmount,
-                    expenseDate: newDate,
-                    expenseCategory: newCategory
-                })
-                console.log(response);
-                await fetchData();
-                setEditExpenseId("");
-                setUpdateStatus("");
-            } catch (error) {
-                setUpdateStatus("Error updating the expense details, try again later");
-                await fetchData();
-                setEditExpenseId("");
-                setUpdateStatus("");
-            }
-        } catch (error) {
-            history.push('/auth');
-        }
+        await props.updateVia(editExpenseId, newTitle, newAmount, newDate, newCategory);
+        setEditExpenseId("");
+        await props.refetchVia(fromDate, toDate);
     }
 
-    const handleDeleteConfirm = async(event) => {
+    const handleDeleteConfirm = async (event) => {
+        setDeleteModelLoading(true);
         console.log(checkboxes);
-        setDeleteStatus(false);
-        try {
-            const user = await Auth.currentAuthenticatedUser();
-            setRefreshState(true);
-            try {
-                setDeleteStatusApi("Successfully deleted the selected expenses");
-                const response = await axios.post('/api/expenses/delete',{
-                    expenseIds: checkboxes
-                })
-                console.log(response);
-                await fetchData();
-                setDeleteStatus("");
-            } catch (error) {
-                setDeleteStatusApi("Error deleting the selected expenses");
-                await fetchData();
-                setDeleteStatusApi("");
-            }
-        } catch (error) {
-            history.push('/auth');
-        }
+        await props.deleteVia(checkboxes);
+        setExpenseData([]);
+        setCheckboxes([]);
+        setDeleteConfirmModel(false);
+        setNewFetch(true);
+        setTimeout(async () => {
+            setDeleteModelLoading(false);
+        }, 2000);
+        await props.refetchVia(fromDate, toDate);
+        setNewFetch(false);
     }
 
 
@@ -231,13 +194,15 @@ export default function ExpenseTable() {
     }
 
     useEffect(() => {
+        console.log("USE EFFECT CALLED");
+        console.log("EXPENSE DATA");
+        console.log(expenseData);
         const data = expenseData.filter(item =>
             item.title.toLowerCase().includes(searchString.toLowerCase())
         )
         const nonFilteredData = expenseData.filter(item =>
             !item.title.toLowerCase().includes(searchString.toLowerCase())
         )
-        console.log(data);
         nonFilteredData.map((item, index) => {
             let updatedCheckBoxIds = checkboxes;
             if (checkboxes.includes(item.id)) {
@@ -249,19 +214,19 @@ export default function ExpenseTable() {
             setCheckboxes(updatedCheckBoxIds);
         })
         setFilteredData(data);
-    }, [searchString])
+    }, [searchString, expenseData])
 
     useEffect(() => {
-        fetchData();
-    }, [refresh])
+        setExpenseData(props.data);
+    }, [props.isDataFetched])
 
     return (
-        <Container style={{ border: '1px solid lightgray', marginTop: 0, zIndex: 'auto', marginLeft: '0px'}}>
+        <Container style={{ border: '1px solid lightgray', marginTop: 0, zIndex: 'auto', marginLeft: '0px' }}>
             <Container style={{ marginTop: 20 }}>
                 <Row>
                     <Col>
                         <div className='d-flex justify-content-start'>
-                            <Card style={{ border: 'none',color: 'inherit' }}>
+                            <Card style={{ border: 'none', color: 'inherit' }}>
                                 <Card.Body style={{ padding: '0' }}>
                                     <Card.Title>Expenses</Card.Title>
                                     <Card.Text>
@@ -275,12 +240,12 @@ export default function ExpenseTable() {
                         <div className='d-flex justify-content-end'>
                             <ButtonGroup size="small">
 
-                                <Button disabled={refreshState === true ? true : editExpenseId !== "" ? true : false} onClick={handleRefresh}>Refresh</Button>
+                                <Button disabled={(props.isUpdateApiDone === false) || (props.isDataFetched === false) || (props.isDeleteApiDone === false) ? true : editExpenseId !== "" ? true : false} onClick={handleRefresh}>Refresh</Button>
                                 {
-                                    editExpenseId === "" ? (<Button disabled={apiError ? true : refreshState === true ? true : checkboxes.length === 1 ? false : true} onClick={handleUpdate}>Edit</Button>) : (<Button style={{ backgroundColor: '#f90', color: 'black' }} onClick={handleUpdateSubmit} disabled={(newTitle === null || newTitle.length < 3 || newTitle.length > 30) ? true : ((newAmount === null) || (newAmount == "") || (newAmount <= 0)) ? true : (newCategory === null || newCategory === "") ? true : (newDate === null || newDate.length == 0) ? true : false}>Update</Button>)
+                                    editExpenseId === "" ? (<Button disabled={(props.apiError === true) || (props.updateApiError === true) || (props.deleteApiError === true) ? true : (props.isUpdateApiDone === false) || (props.isDataFetched === false) || (props.isDeleteApiDone === false) ? true : checkboxes.length === 1 ? false : true} onClick={handleUpdate}>Edit</Button>) : (<Button style={{ backgroundColor: '#f90', color: 'black' }} onClick={handleUpdateSubmit} disabled={(newTitle === null || newTitle.length < 3 || newTitle.length > 30) ? true : ((newAmount === null) || (newAmount == "") || (newAmount <= 0)) ? true : (newCategory === null || newCategory === "") ? true : (newDate === null || newDate.length == 0) ? true : false}>Update</Button>)
                                 }
                                 {
-                                    editExpenseId === "" ? (<Button disabled={apiError ? true : refreshState === true ? true : checkboxes.length > 0 ? false : true} onClick={handleDelete}>Delete</Button>) : (<Button style={{}} onClick={handleCancel}>Cancel</Button>)
+                                    editExpenseId === "" ? (<Button disabled={(props.apiError === true) || (props.updateApiError === true) || (props.deleteApiError === true) ? true : (props.isUpdateApiDone === false) || (props.isDataFetched === false) || (props.isDeleteApiDone === false) ? true : checkboxes.length > 0 ? false : true} onClick={handleDelete}>Delete</Button>) : (<Button style={{}} onClick={handleCancel}>Cancel</Button>)
                                 }
                             </ButtonGroup>
                         </div>
@@ -291,15 +256,15 @@ export default function ExpenseTable() {
                 <Row>
                     <Col>
                         <div className='d-flex justify-content-start'>
-                            <SearchField label="search" placeholder='Search with expense name' hasSearchButton={false} hasSearchIcon={true} style={{ width: 'auto' }} disabled={(editExpenseId !== "" || refreshState === true) ? true : false} value={searchString} onChange={(e) => { console.log(e.target.value); setSearchString(e.target.value) }} />
+                            <SearchField label="search" placeholder='Search with expense name' hasSearchButton={false} hasSearchIcon={true} style={{ width: 'auto' }} disabled={(editExpenseId !== "" || props.apiError === true || props.updateError === true || props.isDataFetched === false || props.isUpdateApiDone === false) ? true : false} value={searchString} onChange={(e) => { console.log(e.target.value); setSearchString(e.target.value) }} />
                         </div>
                     </Col>
                     <Col>
                         <div className='d-flex justify-content-end'>
                             <ButtonGroup size="small">
-                                <TextField type='date' disabled={(refreshState === true) ? true : editExpenseId === "" ? false : true} value={fromDate} onChange={(e) => { setFromDate(e.target.value) }} onBlur={() => { console.log(typeof fromDate); console.log(fromDate.length) }}></TextField>
-                                <TextField type='date' disabled={(refreshState === true) ? true : editExpenseId === "" ? false : true} value={toDate} onChange={(e) => { setToDate(e.target.value) }} onBlur={() => { console.log(typeof toDate); console.log(toDate.length) }}></TextField>
-                                <Button style={{ backgroundColor: '#f90', color: 'black' }} disabled={(refreshState === true) ? true : ((fromDate.length === 0) || (toDate.length === 0)) ? true : (editExpenseId !== "") ? true : false} onClick={async () => { await fetchData() }}>Filter</Button>
+                                <TextField type='date' disabled={(props.isUpdateApiDone === false) || (props.isDataFetched === false) || (editExpenseId !== "") ? true : false} value={fromDate} onChange={(e) => { setFromDate(e.target.value) }} onBlur={() => { console.log(typeof fromDate); console.log(fromDate.length) }}></TextField>
+                                <TextField type='date' disabled={(props.isUpdateApiDone === false) || (props.isDataFetched === false) || (editExpenseId !== "") ? true : false} value={toDate} onChange={(e) => { setToDate(e.target.value) }} onBlur={() => { console.log(typeof toDate); console.log(toDate.length) }}></TextField>
+                                <Button style={{ backgroundColor: '#f90', color: 'black' }} disabled={(props.isUpdateApiDone === false) || (props.isDataFetched === false) ? true : ((fromDate.length === 0) || (toDate.length === 0)) ? true : (editExpenseId !== "") ? true : false} onClick={async () => { setFilteredData([]); await props.refetchVia(fromDate, toDate) }}>Filter</Button>
                             </ButtonGroup>
                         </div>
                     </Col>
@@ -311,7 +276,7 @@ export default function ExpenseTable() {
                     highlightOnHover={editExpenseId === ""}>
                     <TableHead>
                         <TableRow>
-                            <TableCell as="th"><CheckboxField name="subscribe" value="yes" isIndeterminate={((filteredData.length !== 0) && (checkboxes.length === filteredData.length)) ? false : (checkboxes.length > 0) ? true : false} disabled={editExpenseId !== "" || refreshState || filteredData.length === 0} onChange={handleParentCheckBoxChange} checked={(refreshState === true) ? false : (filteredData.length === 0) ? false : (checkboxes.length === filteredData.length) ? true : false} /></TableCell>
+                            <TableCell as="th"><CheckboxField name="parent" value="yes" isIndeterminate={filteredData.length !== 0 && checkboxes.length !== 0 && filteredData.length !== checkboxes.length ? false : (checkboxes.length > 0) ? true : false} disabled={editExpenseId !== "" || refreshState || filteredData.length === 0} onChange={handleParentCheckBoxChange} checked={(refreshState === true) ? false : (filteredData.length === 0) ? false : (checkboxes.length === filteredData.length) ? true : false} /></TableCell>
                             <TableCell as="th">Name</TableCell>
                             <TableCell as="th">Amount</TableCell>
                             <TableCell as="th">Category</TableCell>
@@ -319,22 +284,9 @@ export default function ExpenseTable() {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {refreshState === true ? (
-                            <TableRow>
-                                {/* <TableCell></TableCell>
-                                <TableCell><Loader /></TableCell>
-                                <TableCell><Loader /></TableCell>
-                                <TableCell><Loader /></TableCell>
-                                <TableCell><Loader /></TableCell> */}
-                            </TableRow>
-                        ) : apiError === true ? (
-                            <TableRow>
-                                {/* <TableCell></TableCell>
-                                <TableCell style={{ color: 'red' }}>API ERROR</TableCell>
-                                <TableCell style={{ color: 'red' }}>API ERROR</TableCell>
-                                <TableCell style={{ color: 'red' }}>API ERROR</TableCell>
-                                <TableCell style={{ color: 'red' }}>API ERROR</TableCell> */}
-                            </TableRow>
+
+                        {refreshState === true || props.apiError === true || props.isDataFetched === false || props.isUpdateApiDone === false || props.updateApiError === true || props.isDeleteApiDone === false || props.deleteApiError === true ? (
+                            <TableRow></TableRow>
                         ) : (
                             filteredData.map((item, index) => (
                                 editExpenseId === "" || item.id !== editExpenseId ? (
@@ -349,7 +301,7 @@ export default function ExpenseTable() {
                                     </TableRow>
                                 ) : (
                                     <TableRow>
-                                        <TableCell><CheckboxField disabled={true}/></TableCell>
+                                        <TableCell><CheckboxField disabled={true} /></TableCell>
                                         <TableCell><TextField size="small" value={newTitle} placeholder="Enter here" onChange={(e) => setNewTitle(e.target.value)} hasError={(newTitle === null || newTitle.length < 3 || newTitle.length > 30)} errorMessage={(newTitle.length < 3) ? "cannot have less than 3 characters" : (newTitle.length > 30) ? "cannot have more than 30 characters" : ""}></TextField></TableCell>
                                         <TableCell><TextField size="small" type='number' value={newAmount} placeholder="Enter here" onChange={(e) => setNewAmount(e.target.value)} hasError={(newAmount === null) || (newAmount == "") || (newAmount <= 0)} errorMessage={(newAmount === null || newAmount == "") ? "have to be a valid positive number" : (newAmount <= 0) ? "have to be a valid positive number" : ""}></TextField></TableCell>
                                         <TableCell><SelectField placeholder="Please select an option" value={newCategory} size='small' onChange={(e) => setNewCategory(e.target.value)} hasError={newCategory === null || newCategory === ""} errorMessage={(newCategory === null || newCategory === "") ? "please select a category" : ""}>
@@ -367,30 +319,29 @@ export default function ExpenseTable() {
                                 )
                             )
                             )
-                        )}
+                        )
+
+                        }
                     </TableBody>
                 </Table>
             </Container>
-            {(refreshState === true && updateStatus === "") ? (
+            {(props.isDataFetched === false || props.isDeleteApiDone === false || props.isUpdateApiDone === false) ? (
                 <Container fluid style={{ textAlign: 'center', marginTop: '10px', marginBottom: '10px' }}><Loader variation="linear" /></Container>
-            ) : refreshState === true && updateStatus !== "" ? (
-                <>
-                    <Container fluid style={{ textAlign: 'center', marginTop: '10px', marginBottom: '10px' }}><Loader variation="linear" /></Container>
-                    <Container fluid style={{ textAlign: 'center', marginTop: '10px', marginBottom: '10px', color: updateStatus.includes("Error") ? "red" : "green" }}> {updateStatus}</Container>
-                </>
-            ) : refreshState === true && deleteStatusApi !== "" ? (
-                <>
-                    <Container fluid style={{ textAlign: 'center', marginTop: '10px', marginBottom: '10px' }}><Loader variation="linear" /></Container>
-                    <Container fluid style={{ textAlign: 'center', marginTop: '10px', marginBottom: '10px', color: deleteStatusApi.includes("Error") ? "red" : "green" }}> {deleteStatusApi}</Container>
-                </>
-            ) : (apiError === true) ? (
-                <Container fluid style={{ textAlign: 'center', color: '#ff0000', marginTop: '10px', marginBottom: '10px' }}>Error Fetching Data</Container>
-            ) : (filteredData.length === 0) ? (
-                <Container fluid style={{ textAlign: 'center', marginTop: '10px', marginBottom: '10px' }}> No expenses found in the select date range</Container>
+            ) : (props.apiError === true) ? (
+                <Container fluid style={{ textAlign: 'center', marginTop: '10px', marginBottom: '10px', color: "red" }}><i>Error fetching expense details</i></Container>
+            ) : (props.updateApiError === true) ? (
+                <Container fluid style={{ textAlign: 'center', marginTop: '10px', marginBottom: '10px', color: "red" }}><i>Error updating the expense details</i></Container>
+            ) : (props.deleteApiError === true) ? (
+                <Container fluid style={{ textAlign: 'center', marginTop: '10px', marginBottom: '10px', color: "red" }}><i>Error deleting the selected expenses</i></Container>
+            ) : (filteredData.length === 0 && deleteModelLoading === false) ? (
+                <Container fluid style={{ textAlign: 'center', marginTop: '10px', marginBottom: '10px' }}><i>No expense details found in the selected date range</i></Container>
+            ) : (newFetch === true) ? (
+                <Container fluid style={{ textAlign: 'center', marginTop: '10px', marginBottom: '10px' }}><Loader variation="linear" /></Container>
             ) : (
                 <></>
-            )}
-            <Modal title="All the selected expenses will be deleted" open={deleteStatus} onOk={handleDeleteConfirm} onCancel={() => {setDeleteStatus(!deleteStatus)}}></Modal>
+            )
+            }
+            <Modal title="All the selected expenses will be deleted" open={deleteConfirmModelOpen} onOk={handleDeleteConfirm} onCancel={() => { setDeleteConfirmModel(false) }} closable={false} confirmLoading={deleteModelLoading} cancelButtonProps={{ disabled: deleteModelLoading }}></Modal>
         </Container>
     )
 }

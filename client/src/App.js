@@ -20,6 +20,7 @@ import {
 import ExpenseTable from './components/expenses/ExpenseTable';
 import Header from './components/header/index';
 import Layout from './components/layout/Layout.tsx';
+import ExpenseDetails from './pages/expenses/ExpenseDetails';
 Amplify.configure(awsExports);
 
 
@@ -44,7 +45,7 @@ const App = () => {
 
   return (
     <>
-      <Layout/>
+      <ExpenseDetails/>
 
     </>
   );
